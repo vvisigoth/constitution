@@ -44,13 +44,13 @@ contract SparkAuction is Ownable
   mapping(address => bool) public whitelist;
 
   mapping(address => uint256) public deposits;
-  uint256 public depositCount;                        // number of bids.
+  uint256 public depositCount;                 // number of yet unaccepted bids.
 
   StandardToken public spark;
-  uint256 public salesTarget;                         // wei to be raised.
-  uint256 public endTimestamp;                        // sale end time.
-  uint256 public strikePrice;                         // wei/token. post-sale.
-  uint256 public strikePricePct;                      // % tokens to exact bids.
+  uint256 public salesTarget;                  // remaining wei to be raised.
+  uint256 public endTimestamp;                 // sale end time.
+  uint256 public strikePrice;                  // wei per token. set post-sale.
+  uint256 public strikePricePct;               // % of tokens won by exact bids.
 
   function SparkAuction(StandardToken _spark, uint256 _salesTarget,
                         uint256 _endTimestamp)
@@ -115,50 +115,51 @@ contract SparkAuction is Ownable
     uint256 total = _price.mul(_quantity);
     require(total <= deposits[bidder]);
 
-    uint256 filledQuantity = _quantity;
+    uint256 fillQuantity = _quantity;
 
     // bid under strike price: no sparks.
     if (_price < strikePrice)
     {
-      filledQuantity = 0;
+      fillQuantity = 0;
     }
-    // bid at strike price: partial fill.
+    // bid at exactly strike price: partially fill the bid.
     else if (_price == strikePrice)
     {
-      filledQuantity = filledQuantity.mul(strikePricePct).div(100);
+      fillQuantity = fillQuantity.mul(strikePricePct).div(100);
     }
 
-    // not enough sparks: give remaining.
-    if (sparksLeft < filledQuantity)
+    // not enough sparks left: give remaining.
+    if (sparksLeft < fillQuantity)
     {
-      filledQuantity = sparksLeft;
+      fillQuantity = sparksLeft;
     }
 
-    // not enough funds under cap: sell remainder.
-    uint256 filledTotal = strikePrice.mul(filledQuantity);
-    if (filledTotal > salesTarget)
+    // for the determined quanitity of tokens, calculate the eth to pay.
+    uint256 fillCost = strikePrice.mul(fillQuantity);
+    // not enough funds under sale cap: sell remainder.
+    if (fillCost > salesTarget)
     {
-      filledQuantity = salesTarget.div(strikePrice);
-      filledTotal = strikePrice.mul(filledQuantity);
+      fillQuantity = salesTarget.div(strikePrice);
+      fillCost = strikePrice.mul(fillQuantity);
     }
 
     // if bid has been filled, send sparks.
-    if (filledTotal > 0)
+    if (fillCost > 0)
     {
-      owner.transfer(filledTotal);
-      salesTarget = salesTarget - filledTotal;
-      sparksLeft = sparksLeft - filledQuantity;
+      owner.transfer(fillCost);
+      salesTarget = salesTarget - fillCost;
+      sparksLeft = sparksLeft - fillQuantity;
     }
     // extra funds: send them back.
-    if (deposits[bidder] > filledTotal)
+    if (deposits[bidder] > fillCost)
     {
-      uint256 extra = deposits[bidder] - filledTotal;
+      uint256 extra = deposits[bidder] - fillCost;
       deposits[bidder] = 0;
       bidder.transfer(extra);
     }
 
     depositCount = depositCount - 1;
-    spark.transfer(bidder, filledQuantity);
+    spark.transfer(bidder, fillQuantity);
   }
 
   function withdrawEther()
