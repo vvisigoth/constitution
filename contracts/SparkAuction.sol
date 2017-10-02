@@ -41,6 +41,8 @@ contract SparkAuction is Ownable
   event Deposit(address indexed bidder, uint256 price);
   event StrikePriceSet(uint256 strikePrice);
 
+  mapping(address => bool) public whitelist;
+
   mapping(address => uint256) public deposits;
   uint256 public depositCount;                        // number of bids.
 
@@ -49,8 +51,6 @@ contract SparkAuction is Ownable
   uint256 public endTimestamp;                        // sale end time.
   uint256 public strikePrice;                         // wei/token. post-sale.
   uint256 public strikePricePct;                      // % tokens to exact bids.
-
-
 
   function SparkAuction(StandardToken _spark, uint256 _salesTarget,
                         uint256 _endTimestamp)
@@ -64,6 +64,7 @@ contract SparkAuction is Ownable
     public
     payable
     beforeSale
+    whitelisted(msg.sender)
   {
     deposits[msg.sender] = deposits[msg.sender] + msg.value;
     depositCount = depositCount + 1;
@@ -75,6 +76,22 @@ contract SparkAuction is Ownable
     payable
   {
     deposit();
+  }
+
+  function addToWhitelist(address _address)
+    external
+    onlyOwner
+    beforeSale
+  {
+    whitelist[_address] = true;
+  }
+
+  function removeFromWhitelist(address _address)
+    external
+    onlyOwner
+    beforeSale
+  {
+    whitelist[_address] = false;
   }
 
   function setStrikePrice(uint256 _price, uint256 _pct)
@@ -151,6 +168,12 @@ contract SparkAuction is Ownable
     uint256 total = deposits[msg.sender];
     deposits[msg.sender] = 0;
     msg.sender.transfer(total);
+  }
+
+  modifier whitelisted(address _address)
+  {
+    require(whitelist[_address]);
+    _;
   }
 
   modifier beforeSale
