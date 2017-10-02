@@ -104,7 +104,7 @@ contract SparkAuction is Ownable
     StrikePriceSet(_price);
   }
 
-  function acceptBid(uint256 _price, uint16 _quantity, uint8 _v, bytes32 _r,
+  function acceptBid(uint256 _price, uint256 _quantity, uint8 _v, bytes32 _r,
                      bytes32 _s)
     external
     afterSale
