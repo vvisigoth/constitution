@@ -41,9 +41,9 @@ contract SparkAuction is Ownable
   event Deposit(address indexed bidder, uint256 price);
   event StrikePriceSet(uint256 strikePrice);
 
-  mapping(address => bool) public whitelist;
+  mapping(address => bool) public whitelist;   // permitted auction bidders.
 
-  mapping(address => uint256) public deposits;
+  mapping(address => uint256) public deposits; // deposited funds per bidder.
   uint256 public depositCount;                 // number of yet unaccepted bids.
 
   StandardToken public spark;
@@ -98,25 +98,30 @@ contract SparkAuction is Ownable
     external
     onlyOwner
   {
+    // strike price can only be set once, after the bidding period.
     require(endTimestamp <= block.timestamp && strikePrice == 0 && _price != 0);
     strikePrice = _price;
     strikePricePct = _pct;
     StrikePriceSet(_price);
   }
 
+  // accept a bid. hands out and refuns sparks and eth respectively.
   function acceptBid(uint256 _price, uint256 _quantity, uint8 _v, bytes32 _r,
                      bytes32 _s)
     external
     afterSale
   {
-    uint256 sparksLeft = spark.balanceOf(this);
+    // calculate the bid hash, so that we can deduce the bid's sender from the
+    // signed bid hash we got passed.
     bytes32 bidHash = sha3(address(this), _price, _quantity);
     address bidder = ecrecover(bidHash, _v, _r, _s);
-    uint256 total = _price.mul(_quantity);
-    require(total <= deposits[bidder]);
 
+    // the bid mustn't exceed the bidder's deposited funds.
+    uint256 totalCost = _price.mul(_quantity);
+    require(totalCost <= deposits[bidder]);
+
+    // first, we determine how many sparks the bidder receives.
     uint256 fillQuantity = _quantity;
-
     // bid under strike price: no sparks.
     if (_price < strikePrice)
     {
@@ -129,28 +134,31 @@ contract SparkAuction is Ownable
     }
 
     // not enough sparks left: give remaining.
+    uint256 sparksLeft = spark.balanceOf(this);
     if (sparksLeft < fillQuantity)
     {
       fillQuantity = sparksLeft;
     }
 
-    // for the determined quanitity of tokens, calculate the eth to pay.
+    // for the determined sparks quantity, calculate the eth the bidder must pay
     uint256 fillCost = strikePrice.mul(fillQuantity);
-    // not enough funds under sale cap: sell remainder.
+    // if fully filling the bid would bring us over the sale cap,
+    // fill just enough to hit the cap instead.
+    // (a well-calculated strike price should prevent this from happening.)
     if (fillCost > salesTarget)
     {
       fillQuantity = salesTarget.div(strikePrice);
       fillCost = strikePrice.mul(fillQuantity);
     }
 
-    // if bid has been filled, send sparks.
+    // if we fill any sparks for this bid, transfer their cost to the auctioneer
     if (fillCost > 0)
     {
       owner.transfer(fillCost);
       salesTarget = salesTarget - fillCost;
       deposits[bidder] = deposits[bidder] - fillCost;
     }
-    // extra funds: send them back.
+    // if any deposited eth remains, send it back to the bidder.
     if (deposits[bidder] > 0)
     {
       uint256 extra = deposits[bidder];
@@ -158,6 +166,7 @@ contract SparkAuction is Ownable
       bidder.transfer(extra);
     }
 
+    // finally, transfer the filled sparks to the bidder.
     depositCount = depositCount - 1;
     spark.transfer(bidder, fillQuantity);
   }
