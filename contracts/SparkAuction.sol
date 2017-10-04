@@ -148,12 +148,12 @@ contract SparkAuction is Ownable
     {
       owner.transfer(fillCost);
       salesTarget = salesTarget - fillCost;
-      sparksLeft = sparksLeft - fillQuantity;
+      deposits[bidder] = deposits[bidder] - fillCost;
     }
     // extra funds: send them back.
-    if (deposits[bidder] > fillCost)
+    if (deposits[bidder] > 0)
     {
-      uint256 extra = deposits[bidder] - fillCost;
+      uint256 extra = deposits[bidder];
       deposits[bidder] = 0;
       bidder.transfer(extra);
     }
