@@ -1,5 +1,5 @@
 // an urbit star pool
-// untested draft
+// draft
 
 pragma solidity 0.4.15;
 
