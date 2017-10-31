@@ -1,4 +1,4 @@
-// an urbit star bank
+// an urbit star pool
 // untested draft
 
 pragma solidity 0.4.15;
@@ -8,7 +8,7 @@ import 'zeppelin-solidity/contracts/token/BurnableToken.sol';
 
 import './Constitution.sol';
 
-contract Bank is MintableToken, BurnableToken
+contract Pool is MintableToken, BurnableToken
 {
   // token details
   string constant public name = "StarToken";
@@ -25,12 +25,12 @@ contract Bank is MintableToken, BurnableToken
   // all ownership checks for us.
   //uint16[] public assets;
 
-  function Bank(Ships _ships)
+  function Pool(Ships _ships)
   {
     ships = _ships;
   }
 
-  // give one latent star to the bank.
+  // give one latent star to the pool.
   // this contract's address must be set as a launcher for the star's parent.
   function deposit(uint16 _star)
     external
@@ -44,7 +44,7 @@ contract Bank is MintableToken, BurnableToken
     mint(msg.sender, oneStar);
   }
 
-  // take one star from the bank.
+  // take one star from the pool.
   // this contract's address must have a StarToken allowance of at least oneStar
   function withdraw(uint16 _star)
     external
