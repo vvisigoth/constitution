@@ -30,14 +30,14 @@ contract Bank is MintableToken, BurnableToken
     ships = _ships;
   }
 
-  // give one star to the bank.
+  // give one latent star to the bank.
   // this contract's address must be set as a launcher for the star's parent.
   function deposit(uint16 _star)
     external
     isStar(_star)
   {
-    // only a star's current owner may deposit it.
-    require(ships.isPilot(_star, msg.sender));
+    // only a star's parent may deposit it.
+    require(ships.isPilot(ships.getOriginalParent(_star), msg.sender));
     // attempt to grant the star to us.
     Constitution(ships.owner()).launch(_star, this, 0);
     // we succeeded, so grant the sender their token.
@@ -51,11 +51,13 @@ contract Bank is MintableToken, BurnableToken
     isStar(_star)
   {
     // attempt to take one token from them.
-    transferFrom(msg.sender, this, oneStar);
+    // we use this.call for token operations so that msg.sender gets set
+    // to us. token operations won't complete correctly otherwise.
+    this.call.gas(50000)(bytes4(sha3("transferFrom(address,address,uint256)")), msg.sender, this, oneStar);
     // attempt to transfer the sender their star.
     Constitution(ships.owner()).transferShip(_star, msg.sender, true);
     // we own one less star, so burn one token.
-    burn(oneStar);
+    this.call.gas(50000)(bytes4(sha3("burn(uint256)")), oneStar);
   }
 
   // test if the ship is, in fact, a star.
