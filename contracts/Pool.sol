@@ -8,6 +8,9 @@ import 'zeppelin-solidity/contracts/token/BurnableToken.sol';
 
 import './Constitution.sol';
 
+// we use this.call for certain operations so that msg.sender gets set to us.
+// they operations won't run correctly otherwise.
+
 contract Pool is MintableToken, BurnableToken
 {
   // token details
@@ -28,6 +31,10 @@ contract Pool is MintableToken, BurnableToken
   function Pool(Ships _ships)
   {
     ships = _ships;
+    // needs to be its own owner so that it can mint.
+    // this pool design is completely hands-off after launching, so the contract
+    // creator doesn't need special permissions anyway.
+    owner = this;
   }
 
   // give one star to the pool.
@@ -54,7 +61,7 @@ contract Pool is MintableToken, BurnableToken
     // 2: for latent stars, grant the pool launch permission on a galaxy.
     //    the pool will launch the deposited star directly to itself.
     else if (ships.isPilot(ships.getOriginalParent(_star), msg.sender)
-        && ships.isLauncher(_star, this))
+        && ships.isLauncher(ships.getOriginalParent(_star), this))
     {
       // attempt to launch the star to us.
       Constitution(ships.owner()).launch(_star, this, 0);
@@ -65,19 +72,14 @@ contract Pool is MintableToken, BurnableToken
       revert();
     }
     // we succeeded, so grant the sender their token.
-    mint(msg.sender, oneStar);
+    this.call.gas(50000)(bytes4(sha3("mint(address,uint256)")), msg.sender, oneStar);
   }
 
   // take one star from the pool.
-  // this contract's address must have a StarToken allowance of at least oneStar
   function withdraw(uint16 _star)
     external
     isStar(_star)
   {
-    // attempt to take one token from them.
-    // we use this.call for token operations so that msg.sender gets set
-    // to us. token operations won't run correctly otherwise.
-    this.call.gas(50000)(bytes4(sha3("transferFrom(address,address,uint256)")), msg.sender, this, oneStar);
     // attempt to transfer the sender their star.
     Constitution(ships.owner()).transferShip(_star, msg.sender, true);
     // we own one less star, so burn one token.
