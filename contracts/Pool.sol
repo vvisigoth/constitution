@@ -23,10 +23,11 @@ contract Pool is MintableToken, BurnableToken
   // the current constitution is always ships.owner.
   Ships public ships;
 
-  // could keep track of assets for public viewing.
-  // this isn't a necessity for logic because the constitution already performs
-  // all ownership checks for us.
-  //uint16[] public assets;
+  // keep track of assets for public viewing.
+  uint16[] public assets;
+  // per asset: index in assets array (for efficient deletion).
+  //NOTE these describe the "nth array element", so they're at index n-1.
+  mapping(uint16 => uint256) public assetNumbers;
 
   function Pool(Ships _ships)
   {
@@ -35,6 +36,14 @@ contract Pool is MintableToken, BurnableToken
     // this pool design is completely hands-off after launching, so the contract
     // creator doesn't need special permissions anyway.
     owner = this;
+  }
+
+  function getAllAssets()
+    constant
+    external
+    returns (uint16[] allAssets)
+  {
+    return assets;
   }
 
   // give one star to the pool.
@@ -71,6 +80,8 @@ contract Pool is MintableToken, BurnableToken
     {
       revert();
     }
+    assets.push(_star);
+    assetNumbers[_star] = assets.length;
     // we succeeded, so grant the sender their token.
     this.call.gas(50000)(bytes4(sha3("mint(address,uint256)")), msg.sender, oneStar);
   }
@@ -80,6 +91,18 @@ contract Pool is MintableToken, BurnableToken
     external
     isStar(_star)
   {
+    // retrieve current asset index.
+    uint256 i = assetNumbers[_star];
+    require(i > 0);
+    i--;
+    // copy last asset to current index.
+    uint256 last = assets.length - 1;
+    uint16 move = assets[last];
+    assets[i] = move;
+    // delete last asset.
+    delete(assets[last]);
+    assets.length = last;
+    assetNumbers[_star] = 0;
     // attempt to transfer the sender their star.
     Constitution(ships.owner()).transferShip(_star, msg.sender, true);
     // we own one less star, so burn one token.

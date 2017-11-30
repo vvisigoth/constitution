@@ -52,6 +52,9 @@ contract('Pool', function([owner, user1, user2]) {
     await pool.deposit(256, {from:user1});
     assert.isTrue(await ships.isPilot(256, pool.address));
     assert.equal(await pool.balanceOf(user1), 1000000000000000000);
+    let res = await pool.getAllAssets();
+    assert.equal(res.length, 1);
+    assert.equal(res[0], 256);
   });
 
   it('deposit star as star owner', async function() {
@@ -74,6 +77,10 @@ contract('Pool', function([owner, user1, user2]) {
     await pool.deposit(512, {from:user2});
     assert.isTrue(await ships.isPilot(512, pool.address));
     assert.equal(await pool.balanceOf(user2), 1000000000000000000);
+    let res = await pool.getAllAssets();
+    assert.equal(res.length, 2);
+    assert.equal(res[0], 256);
+    assert.equal(res[1], 512);
   });
 
   it('withdraw a star', async function() {
@@ -84,16 +91,20 @@ contract('Pool', function([owner, user1, user2]) {
     } catch(err) {
       assertJump(err);
     }
-    // withdraw a star
+    // // withdraw a star
     await pool.withdraw(256, {from:user1});
     assert.isTrue(await ships.isPilot(256, user1));
     assert.equal((await pool.balanceOf(user1)), 0);
-    // can't withdraw without balance.
+    let res = await pool.getAllAssets();
+    assert.equal(res.length, 1);
+    assert.equal(res[0].toNumber(), 512);
+    // // can't withdraw without balance.
     try {
       await pool.withdraw(512, {from:user1});
       assert.fail('should have thrown before');
     } catch(err) {
-      assertJump(err);
+      assert.isAbove(err.message.search('invalid opcode'), -1,
+        'Invalid opcode must be returned, but got ' + err);
     }
   });
 });
