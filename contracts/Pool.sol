@@ -8,8 +8,6 @@ import 'zeppelin-solidity/contracts/token/BurnableToken.sol';
 
 import './Constitution.sol';
 
-// we use this.call for certain operations so that msg.sender gets set to us.
-// they operations won't run correctly otherwise.
 
 contract Pool is MintableToken, BurnableToken
 {
@@ -83,6 +81,8 @@ contract Pool is MintableToken, BurnableToken
     assets.push(_star);
     assetNumbers[_star] = assets.length;
     // we succeeded, so grant the sender their token.
+    // we use this.call here so that msg.sender gets set to us.
+    // the operations won't run correctly otherwise.
     this.call.gas(50000)(bytes4(sha3("mint(address,uint256)")), msg.sender, oneStar);
   }
 
