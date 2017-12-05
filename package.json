@@ -1,0 +1,29 @@
+{
+  "name": "constitution",
+  "version": "1.0.0",
+  "description": "The Urbit PKI on the Ethereum blockchain.",
+  "main": "truffle.js",
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vvisigoth/constitution.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vvisigoth/constitution/issues"
+  },
+  "homepage": "https://github.com/vvisigoth/constitution#readme",
+  "dependencies": {
+    "babel-polyfill": "^6.26.0",
+    "babel-register": "^6.26.0",
+    "truffle": "^4.0.1",
+    "zeppelin-solidity": "^1.3.0"
+  }
+}
